@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Shortbread Scrambler</title>
+	  <style type="text/css">
+#html, body{
+	text-align:center;}
+#guessField {
+	box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, .2);
+    background-color: white;
+    height: 2em;
+    text-transform: uppercase;
+	font-size: 2em;}
+.letter {
+	border: 1px solid black;
+    border-radius: 2px;
+    text-align: center;
+	font-size: 2em;
+    vertical-align: middle;
+    width: 2em;
+    height: 2em;
+    text-transform: uppercase;
+    padding: 0em;
+    box-shadow: 2px 2px 2px 0px rgba(0, 0, 0, .2);
+    background-color: white;	}
+
+.letter-middle {
+    background-color: black;
+    background: linear-gradient(to bottom, #222 50%,#000 100%);
+    color: white;}
+.selected {
+	background-color: #cfc;
+    color: green;
+    background: linear-gradient(to bottom, #cfc 50%,#aea 100%);}
+.correct {
+background-color:green;}
+.wrong {
+background-color:red;}
+#answerTable {
+	text-align:left;
+	min-height:120px;}
+.revealWordP {
+	color:blue;
+	width:75px;
+	float:left;}
+.answerWordP {
+width:75px;
+float:left;}
+
+</style>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="css/bootstrap.min.css" rel="stylesheet">  
+	<link href="css/bootstrap-datetimepicker.min.css" rel="stylesheet">
+		
+		<script src="js/respond.js"></script>
+		<script type="text/javascript"  src="phonegap.js">	</script>	
+
+
+</head>
+<body>
+<div data-role="page">
+	<div data-role="header" class="row col-xs-10 col-xs-offset-1 col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+	<img id="logo" src="img/GElogo.png" alt="Govenors Estate Shortbread Scrambler Logo"  style="max-width:370px;"/>
+	</div><!-- /header -->
+	<div role="main">
+	<div class="row col-xs-10 col-xs-offset-1 col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+	</br>
+    <table id="puzzle" align="center">
+      <tbody>
+        <tr>
+          <td class="letter" id="letterCell1"></td>
+          <td class="letter" id="letterCell2"></td>
+          <td class="letter" id="letterCell3"></td>
+        </tr>
+        <tr>
+          <td class="letter" id="letterCell4"></td>
+          <td class="letter letter-middle" id="letterMiddle"></td>
+          <td class="letter" id="letterCell5"></td>
+        </tr>
+        <tr>
+          <td class="letter" id="letterCell6"></td>
+          <td class="letter" id="letterCell7"></td>
+          <td class="letter" id="letterCell0"></td>
+        </tr>
+      </tbody>
+    </table>
+	</br>
+	<div id="wrapper">
+	<form id="guessForm" class="col-xs-10 col-xs-offset-1 col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+		<div><input class="form-control" name="guessField" id="guessField" value="" maxlength="9"/></div>
+		<input id="formGuess" type="button" name="guessButton" value="CHECK"  class="btn btn-default btn-block" onClick="javascript:guess()" />
+		<input id="formClear" type="button" name="clearButton" value="CLEAR"  class="btn btn-default btn-block" onClick="javascript:clearBtn()" />
+	<div id="answerDiv" ></div>
+	</form>
+	</div>
+	<div class="row col-xs-10 col-xs-offset-1 col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+		<div id="answerTable" align="center">
+		</div>
+	</div>
+	<div class="progress btn-block">
+		  <div class="progress-bar progress-bar-success" style="width: 0%" id="progressBar">
+		  </div>
+		  <div class="progress-bar progress-bar-warning progress-bar-striped" style="width: 0%">
+		  </div>
+		  <div class="progress-bar progress-bar-danger" style="width: 0%">
+		  </div>
+		</div>
+	<input id="showAnswers" type="button" name="showAnswers" value="SHOW ANSWERS"  class="btn btn-default btn-block" onClick="javascript:showAnswers()" />
+	<input id="randomPuzzle" type="button" name="randomPuzzle" value="NEW RANDOM SCRAMBLER"  class="btn btn-default btn-block" onClick="javascript:randomPuzzle()" style="display:none;" />
+	</div>
+
+</div><!-- /content -->
+
+
+</div><!-- /page -->
+<!-- bootstrap javascript -->
+	<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+		<script src="js/anagram-solver.js"></script>
+		<script src="js/underscore-min.js"></script>
+		<script src="js/dictionary.js"></script>
+
+</body>
+<script>
+var nineLetterWord = "scrambler";
+var importantLetter = 's';
+
+
+ $(function() {
+	letterBtns();
+	createAnswers();
+	createWordArray();
+	});
+	
+
+
+</script>
+</html>

@@ -1,0 +1,450 @@
+
+<html ng-app="nine">
+<head>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="viewport" content="width=device-width" />
+  <meta name="viewport" content="initial-scale=1, user-scalable=no" />   
+
+  <title>Nine Letter Word Block Puzzle Solver</title>
+  <style type="text/css">
+body {
+   font-family: sans-serif;
+   background-color: #eee;
+   color: #444;
+}
+.game {
+  max-width: 30em;
+  margin: 0 auto;
+  background-color: #f8f8f8;
+  padding: 1 2em;
+  box-shadow:  0px 0px 200px 100px rgba(0, 0, 0, .1);
+  border-radius: 5px;
+}
+.game h1 {
+  margin-left: -0.5em;
+  margin-right: -0.5em;
+  white-space: nowrap;
+}
+input.search {
+   text-transform: uppercase;
+   border: 1px solid black;
+   font-size: 1em;
+   width: 12em;
+   padding: 3px 12px;
+   border-radius: 2px;
+}
+table#puzzle {
+   border-collapse: separated;
+   border-spacing: 3px;
+   font-size: 2em;
+}
+table#puzzle td {
+   border: 1px solid black;
+   border-radius: 2px;
+   text-align: center;
+   vertical-align: middle;
+   width: 2em;
+   height: 2em;
+   text-transform: uppercase;
+   padding: 0em;
+   box-shadow:  2px 2px 2px 0px rgba(0, 0, 0, .2);
+   background-color: white;
+   background: linear-gradient(to bottom, #ffffff 50%,#f0f0f0 100%);
+}
+#puzzle .center {
+  background-color:black;
+  background: linear-gradient(to bottom, #222 50%,#000 100%);
+  color:white;
+}
+#puzzle .used,
+#puzzle .used.center {
+  background-color: #cfc;
+  color: green;
+  background: linear-gradient(to bottom, #cfc 50%,#aea 100%);
+}
+
+input.guess {
+   text-transform: uppercase;
+   border: 1px solid black;
+   font-size: 1em;
+   width: 12em;
+   padding: 3px 12px;
+   border-radius: 2px;
+}
+
+button.move,
+button.clear {
+   text-transform: uppercase;
+   font-size: 1em;
+   padding: 3px 12px;
+   text-align: center;
+}
+
+.error {
+  color: #F88;
+  font-style: italic;
+}
+
+.result {
+  padding: 0.5em;
+  border-radius: 5px;
+}
+.result.good {
+  color: #040;
+  font-style: bold;
+  background-color: #cfc;
+}
+.result.bad {
+  color: #400;
+  font-style: normal;
+  background-color: #fcc;
+}
+
+.right {
+  color: black;
+}
+.wrong {
+  color: #f88;
+  text-decoration: line-through;
+}
+
+input.reveal {
+   text-transform: uppercase;
+   font-size: 1em;
+   width: 12em;
+   padding: 3px 12px;
+   text-align: center;
+}
+ol li {
+  font-size: 1em;
+  color: gray;
+  padding: 0.25em;
+}
+ol li a {
+  font-size: 1.3em;
+  color: black;
+  text-decoration: none;
+}
+ol li a:hover {
+  color: blue;
+  text-decoration: none;
+}
+
+.played {
+  background-color: #cfc;
+  border-radius: 5px;
+}
+.played a {
+  color: green;
+  font-weight: bold;
+}
+
+  </style>
+  <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
+  <script type="text/javascript">
+      angular.module('nine', [])
+      .directive('ngEnter', function() {
+          return function(scope, elm, attrs) {
+              elm.bind("keyup", function(event) {
+                  if(event.which === 13) {
+                      scope.$apply(attrs.ngEnter);
+                  }
+              });
+          };
+      });
+
+      function Play($scope) {
+          $scope.answers = ["beck", "black", "blake", "kalb", "kane", "kean", "keble", "klan", "klee", "akee", "akene", "alkene", "ankle", "back", "backed", "bake", "baked", "balk", "balked", "bank", "banked", "beak", "beaked", "beck", "bedeck", "black", "blacked", "blacken", "blackened", "blank", "blanked", "bleak", "cake", "caked", "clank", "clanked", "cleek", "dank", "deck", "deckle", "eked", "kaed", "kale", "kcal", "keel", "keen", "knead", "knee", "kneed", "kneel", "lack", "lacked", "lake", "lank", "leak", "leaked", "leek", "naked", "neck", "necked"];
+
+          $scope.letters = "bceakdlen";
+          $scope.guesses = [];
+          $scope.guess = "";
+          function reset() {
+              $scope.used = [0,0,0,0,0,0,0,0,0];
+          }
+
+          reset();
+
+          $scope.type = function(letter) {
+              if($scope.guess.length < 9 && !$scope.used[letter]) {
+                  $scope.guess += $scope.letters[letter];
+                  $scope.used[letter] = 1;
+              }
+              $scope.result = "";
+          };
+
+          $scope.change = function () {
+              reset();
+              for(var i=0; i < $scope.guess.length; i++) {
+                  for(var j=0; j<9; j++) {
+                      if($scope.guess[i].toLowerCase() == $scope.letters[j] && $scope.used[j] == 0) {
+                          $scope.used[j] = 1;
+                          break;
+                      }
+                  }
+              }
+          };
+
+          $scope.valid = function(guess) {
+              $scope.error = "";
+              if(guess.length > 3 && guess.length <= 9) {
+                  if(guess.indexOf('k') >= 0 || guess.indexOf('K') >= 0) {
+                      return true;
+                  } else {
+                      $scope.error = "Guess must use 'k'.";
+                  }
+              } else if(guess.length > 0) {
+                  $scope.error = "Guess must have 4-9 letters.";
+              }
+              return false;
+          };
+
+          // play a move (guess a word)
+          // if not auto, try adding/removing an s and guessing that variant too
+          $scope.move = function(guess, auto) {
+              guess = guess.toLowerCase();
+              if(played($scope.guesses, guess) && !auto) {
+                  $scope.result = ['result bad', "Guessed already!"];
+              } else {
+                  if(correct($scope.answers, guess)) {
+                      $scope.result = ['result good', "Correct!"];
+                      $scope.guesses.push({word:guess, right:true});
+                      if(!auto) {
+                          if(guess.substr(-1)=='s') {
+                              $scope.move(guess.substr(0,guess.length-1), true);
+                          } else {
+                              $scope.move(guess+'s', true);
+                          }
+                      }
+                  } else if(!auto) {
+                      $scope.result = ['result bad', "Wrong."];
+                      $scope.guesses.push({word:guess, right:false});
+                  }
+              }
+              reset();
+              $scope.guess = "";
+          }
+          $scope.clear = function() {
+              reset();
+              $scope.guess = "";
+          };
+
+          $scope.played = function(word) {
+              return played($scope.guesses, word.toLowerCase());
+          };
+
+          function played(words, word) {
+              for(var i=0; i < words.length; i++) {
+                  if(words[i].word == word) {
+                      return true;
+                  }
+              }
+              return false;
+          }
+
+          function correct(words, word) {
+              for(var i=0; i < words.length; i++) {
+                  if(words[i] == word) {
+                      return true;
+                  }
+              }
+              return false;
+          }
+      }
+function shuffle() {
+    var tbody = document.getElementById('puzzle').children[0];
+    var placeholder = document.createElement('td');
+    // Randomize td order in-place using Fisher-Yates shuffle algorithm.
+    for (var i = 8; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        if(i!=j) {
+            var tr_a = tbody.children[Math.floor(i/3)];
+            var tr_b = tbody.children[Math.floor(j/3)];
+            var td_a = tr_a.children[i%3];
+            var td_b = tr_b.children[j%3];
+            tr_b.insertBefore(placeholder, td_b);
+            tr_a.insertBefore(td_b, td_a);
+            tr_b.insertBefore(td_a, placeholder);
+            tr_b.removeChild(placeholder);
+        }
+    }
+}
+
+function check_search() {
+    var letters = document.getElementById('letters');
+    if(letters.value.length==0
+       || (new RegExp('[a-zA-Z]{9}')).test(letters.value)) {
+        return true;
+    }
+
+    alert('Please type 9 letters, no spaces or digits.');
+    return false;
+}
+
+  </script>
+</head>
+<body>
+ <div class="game" ng-controller="Play">
+  <h1>Nine Letter Word</h1>
+  <p style="font-size:0.7em; position: relative; top: -1em;">
+    Based on the concept of the "Target Puzzle" in The Age.
+  </p>
+
+  <p>
+    Type in the letters from the nine-letter word block puzzle to list all possible matching words
+    or try a <a href="/random">random puzzle</a>
+    (from <a href="http://packages.ubuntu.com/lucid/wbritish-large"
+             title="This is a spell checking word list, so admittedly not ideal.">a list</a>
+    of about 17,000!)
+  </p>
+
+  <form name="puzzle"
+        action="/get"
+        method="GET"
+        onsubmit="return check_search();">
+    <input class="search"
+           type="text"
+           id="letters"
+           name="letters"
+           value="bceakdlen"
+           size="9"
+           maxlength="9"
+           onchange="if(check_search()) { this.form.submit(); }" />
+  </form>
+
+  
+    <h2>Play</h2>
+    <p>Click the letters in the puzzle or type in your guess: (<a href="javascript:void(shuffle())">shuffle letters</a>)</p>
+
+    <table id="puzzle">
+      <tbody>
+        <tr>
+          <td ng-mousedown="type(0)" ng-class="{used:used[0]}">b</td>
+          <td ng-mousedown="type(1)" ng-class="{used:used[1]}">c</td>
+          <td ng-mousedown="type(2)" ng-class="{used:used[2]}">e</td>
+        </tr>
+        <tr>
+          <td ng-mousedown="type(3)" ng-class="{used:used[3]}">a</td>
+          <td ng-mousedown="type(4)" ng-class="{used:used[4], center:true}">k</td>
+          <td ng-mousedown="type(5)" ng-class="{used:used[5]}">d</td>
+        </tr>
+        <tr>
+          <td ng-mousedown="type(6)" ng-class="{used:used[6]}">l</td>
+          <td ng-mousedown="type(7)" ng-class="{used:used[7]}">e</td>
+          <td ng-mousedown="type(8)" ng-class="{used:used[8]}">n</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+        <input type="text" size="9" maxlength="9" ng-model="guess" ng-change="change()" ng-enter="move(guess)" class="guess"/>
+        <button ng-click="move(guess)" ng-disabled="!valid(guess);" class="move">Guess</button>
+        <button ng-click="clear()" ng-disabled="!guess.length" class="clear">Clear</button>
+    </p>
+
+    <p class="error" ng-show="error">{{error}}</p>
+    <p ng-show="result" ng-class="result[0]">{{result[1]}}</p>
+
+    <table>
+        <tr>
+            <td style="vertical-align:top;">
+                <ol>
+                    <li ng-repeat="guess in guesses | filter:{right:true} | orderBy:'word'" class="right">
+                        {{guess.word}}
+                    </li>
+                </ol>
+            </td>
+            <td style="vertical-align:top;">
+                <ol>
+                    <li ng-repeat="guess in guesses | filter:{right:false} | orderBy:'word'" class="wrong">
+                        {{guess.word}}
+                    </li>
+                </ol>
+            </td>
+        </tr>
+    </table>
+
+    
+      <p>
+        <input class="reveal" type="button" value="Show answers" onclick="if(confirm('Show answers?')) {this.parentNode.style.display='none';document.getElementById('answers').style.display='';}"/>
+        Target: 51 words!
+      </p>
+      <div id="answers" style="display:none;">
+        
+          
+            <h2>9 letter words</h2>
+            <p>Click word to search for a definition.</p>
+            
+            <ol>
+              <li ng-class="{played:played('blackened')}"><a target="_blank" href="http://www.google.com/search?q=define:blackened">blackened</a></li>
+            </ol>
+            
+            
+          
+        
+          
+        
+          
+            <h2>7 letter words</h2>
+            
+            
+            <ol>
+              <li ng-class="{played:played('blacked')}"><a target="_blank" href="http://www.google.com/search?q=define:blacked">blacked</a></li><li ng-class="{played:played('blacken')}"><a target="_blank" href="http://www.google.com/search?q=define:blacken">blacken</a></li><li ng-class="{played:played('blanked')}"><a target="_blank" href="http://www.google.com/search?q=define:blanked">blanked</a></li><li ng-class="{played:played('clanked')}"><a target="_blank" href="http://www.google.com/search?q=define:clanked">clanked</a></li>
+            </ol>
+            
+            
+          
+        
+          
+            <h2>6 letter words</h2>
+            
+            
+            <ol>
+              <li ng-class="{played:played('alkene')}"><a target="_blank" href="http://www.google.com/search?q=define:alkene">alkene</a></li><li ng-class="{played:played('backed')}"><a target="_blank" href="http://www.google.com/search?q=define:backed">backed</a></li><li ng-class="{played:played('balked')}"><a target="_blank" href="http://www.google.com/search?q=define:balked">balked</a></li><li ng-class="{played:played('banked')}"><a target="_blank" href="http://www.google.com/search?q=define:banked">banked</a></li><li ng-class="{played:played('beaked')}"><a target="_blank" href="http://www.google.com/search?q=define:beaked">beaked</a></li><li ng-class="{played:played('bedeck')}"><a target="_blank" href="http://www.google.com/search?q=define:bedeck">bedeck</a></li><li ng-class="{played:played('deckle')}"><a target="_blank" href="http://www.google.com/search?q=define:deckle">deckle</a></li><li ng-class="{played:played('lacked')}"><a target="_blank" href="http://www.google.com/search?q=define:lacked">lacked</a></li><li ng-class="{played:played('leaked')}"><a target="_blank" href="http://www.google.com/search?q=define:leaked">leaked</a></li><li ng-class="{played:played('necked')}"><a target="_blank" href="http://www.google.com/search?q=define:necked">necked</a></li>
+            </ol>
+            
+            
+          
+        
+          
+            <h2>5 letter words</h2>
+            
+            
+            <ol>
+              <li ng-class="{played:played('akene')}"><a target="_blank" href="http://www.google.com/search?q=define:akene">akene</a></li><li ng-class="{played:played('ankle')}"><a target="_blank" href="http://www.google.com/search?q=define:ankle">ankle</a></li><li ng-class="{played:played('baked')}"><a target="_blank" href="http://www.google.com/search?q=define:baked">baked</a></li><li ng-class="{played:played('black')}"><a target="_blank" href="http://www.google.com/search?q=define:black">black</a></li><li ng-class="{played:played('blank')}"><a target="_blank" href="http://www.google.com/search?q=define:blank">blank</a></li><li ng-class="{played:played('bleak')}"><a target="_blank" href="http://www.google.com/search?q=define:bleak">bleak</a></li><li ng-class="{played:played('caked')}"><a target="_blank" href="http://www.google.com/search?q=define:caked">caked</a></li><li ng-class="{played:played('clank')}"><a target="_blank" href="http://www.google.com/search?q=define:clank">clank</a></li><li ng-class="{played:played('cleek')}"><a target="_blank" href="http://www.google.com/search?q=define:cleek">cleek</a></li><li ng-class="{played:played('knead')}"><a target="_blank" href="http://www.google.com/search?q=define:knead">knead</a></li><li ng-class="{played:played('kneed')}"><a target="_blank" href="http://www.google.com/search?q=define:kneed">kneed</a></li><li ng-class="{played:played('kneel')}"><a target="_blank" href="http://www.google.com/search?q=define:kneel">kneel</a></li><li ng-class="{played:played('naked')}"><a target="_blank" href="http://www.google.com/search?q=define:naked">naked</a></li>
+            </ol>
+            
+            
+            <p>5 letter words that may be proper nouns:</p>
+            <ol>
+              <li ng-class="{played:played('Blake')}"><a target="_blank" href="http://www.google.com/search?q=define:Blake">Blake</a></li><li ng-class="{played:played('Keble')}"><a target="_blank" href="http://www.google.com/search?q=define:Keble">Keble</a></li>
+            </ol>
+            
+          
+        
+          
+            <h2>4 letter words</h2>
+            
+            
+            <ol>
+              <li ng-class="{played:played('akee')}"><a target="_blank" href="http://www.google.com/search?q=define:akee">akee</a></li><li ng-class="{played:played('back')}"><a target="_blank" href="http://www.google.com/search?q=define:back">back</a></li><li ng-class="{played:played('bake')}"><a target="_blank" href="http://www.google.com/search?q=define:bake">bake</a></li><li ng-class="{played:played('balk')}"><a target="_blank" href="http://www.google.com/search?q=define:balk">balk</a></li><li ng-class="{played:played('bank')}"><a target="_blank" href="http://www.google.com/search?q=define:bank">bank</a></li><li ng-class="{played:played('beak')}"><a target="_blank" href="http://www.google.com/search?q=define:beak">beak</a></li><li ng-class="{played:played('beck')}"><a target="_blank" href="http://www.google.com/search?q=define:beck">beck</a></li><li ng-class="{played:played('cake')}"><a target="_blank" href="http://www.google.com/search?q=define:cake">cake</a></li><li ng-class="{played:played('dank')}"><a target="_blank" href="http://www.google.com/search?q=define:dank">dank</a></li><li ng-class="{played:played('deck')}"><a target="_blank" href="http://www.google.com/search?q=define:deck">deck</a></li><li ng-class="{played:played('eked')}"><a target="_blank" href="http://www.google.com/search?q=define:eked">eked</a></li><li ng-class="{played:played('kaed')}"><a target="_blank" href="http://www.google.com/search?q=define:kaed">kaed</a></li><li ng-class="{played:played('kale')}"><a target="_blank" href="http://www.google.com/search?q=define:kale">kale</a></li><li ng-class="{played:played('kcal')}"><a target="_blank" href="http://www.google.com/search?q=define:kcal">kcal</a></li><li ng-class="{played:played('keel')}"><a target="_blank" href="http://www.google.com/search?q=define:keel">keel</a></li><li ng-class="{played:played('keen')}"><a target="_blank" href="http://www.google.com/search?q=define:keen">keen</a></li><li ng-class="{played:played('knee')}"><a target="_blank" href="http://www.google.com/search?q=define:knee">knee</a></li><li ng-class="{played:played('lack')}"><a target="_blank" href="http://www.google.com/search?q=define:lack">lack</a></li><li ng-class="{played:played('lake')}"><a target="_blank" href="http://www.google.com/search?q=define:lake">lake</a></li><li ng-class="{played:played('lank')}"><a target="_blank" href="http://www.google.com/search?q=define:lank">lank</a></li><li ng-class="{played:played('leak')}"><a target="_blank" href="http://www.google.com/search?q=define:leak">leak</a></li><li ng-class="{played:played('leek')}"><a target="_blank" href="http://www.google.com/search?q=define:leek">leek</a></li><li ng-class="{played:played('neck')}"><a target="_blank" href="http://www.google.com/search?q=define:neck">neck</a></li>
+            </ol>
+            
+            
+            <p>4 letter words that may be proper nouns:</p>
+            <ol>
+              <li ng-class="{played:played('Kalb')}"><a target="_blank" href="http://www.google.com/search?q=define:Kalb">Kalb</a></li><li ng-class="{played:played('Kane')}"><a target="_blank" href="http://www.google.com/search?q=define:Kane">Kane</a></li><li ng-class="{played:played('Kean')}"><a target="_blank" href="http://www.google.com/search?q=define:Kean">Kean</a></li><li ng-class="{played:played('Klan')}"><a target="_blank" href="http://www.google.com/search?q=define:Klan">Klan</a></li><li ng-class="{played:played('Klee')}"><a target="_blank" href="http://www.google.com/search?q=define:Klee">Klee</a></li>
+            </ol>
+            
+          
+        
+      </div>
+
+    
+
+  
+
+  <p><a href="http://tompaton.com/">tompaton.com</a></p>
+ </div>
+</body>
+</html>
