@@ -1,0 +1,25 @@
+# Claude Code files
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+*.suo
+*.user
+
+# Android build output (for future native app work)
+android/build/
+android/.gradle/
+android/local.properties
+*.apk
+*.aab
+
+# Node / npm (if added later)
+node_modules/
+npm-debug.log*
+
+# Capacitor / Cordova generated files (common Android wrappers)
+www/
