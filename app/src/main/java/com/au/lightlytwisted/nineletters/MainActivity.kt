@@ -198,7 +198,8 @@ fun PuzzleScreen(vm: PuzzleViewModel = viewModel()) {
                             LetterTile(
                                 letter = grid[index].uppercaseChar(),
                                 isCentre = index == 4,
-                                onClick = { vm.onLetterClick(grid[index]) }
+                                isSelected = index in state.selectedTileIndices,
+                                onClick = { vm.onLetterClick(index, grid[index]) }
                             )
                         }
                     }
@@ -338,15 +339,28 @@ fun PuzzleChooserDialog(onPuzzleSelected: (Puzzle) -> Unit, onDismiss: () -> Uni
     )
 }
 
-// A single letter button in the grid — black background for the centre tile, surface colour for the rest
+// A single letter button — black for the centre tile, green when selected, surface colour otherwise
 @Composable
-fun LetterTile(letter: Char, isCentre: Boolean, onClick: () -> Unit) {
+fun LetterTile(letter: Char, isCentre: Boolean, isSelected: Boolean, onClick: () -> Unit) {
+    val containerColor = when {
+        isSelected -> Color(0xFF4CAF50)
+        isCentre   -> Color.Black
+        else       -> MaterialTheme.colorScheme.surface
+    }
+    val contentColor = when {
+        isSelected -> Color.White
+        isCentre   -> Color.White
+        else       -> MaterialTheme.colorScheme.onSurface
+    }
     Button(
         onClick = onClick,
+        enabled = !isSelected,
         modifier = Modifier.size(80.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isCentre) Color.Black else MaterialTheme.colorScheme.surface,
-            contentColor = if (isCentre) Color.White else MaterialTheme.colorScheme.onSurface
+            containerColor = containerColor,
+            contentColor = contentColor,
+            disabledContainerColor = containerColor,
+            disabledContentColor = contentColor
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {

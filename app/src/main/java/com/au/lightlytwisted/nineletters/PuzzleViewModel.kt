@@ -8,6 +8,8 @@
  *           functions (onLetterClick, onGuess, etc.) in response to user input.
  * Notes:    Dictionary loading runs once on startup; switching puzzles only
  *           reruns the answer-finding step, not the full dictionary load.
+ *           selectedTileIndices tracks which grid positions have been tapped so
+ *           each tile can only be used once per guess.
  */
 
 package com.au.lightlytwisted.nineletters
@@ -29,9 +31,10 @@ enum class GuessResult { NONE, CORRECT, WRONG }
 data class PuzzleState(
     val isLoading: Boolean = true,
     val puzzleName: String = "",
-    val gridLetters: List<Char> = emptyList(),  // 9 letters; index 4 is always the centre
+    val gridLetters: List<Char> = emptyList(),      // 9 letters; index 4 is always the centre
     val centreLetter: Char = ' ',
     val currentGuess: String = "",
+    val selectedTileIndices: List<Int> = emptyList(), // grid positions tapped for the current guess
     val remainingAnswers: Set<String> = emptySet(),
     val guessedWords: List<String> = emptyList(),
     val guessResult: GuessResult = GuessResult.NONE,
@@ -106,15 +109,18 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
         loadPuzzle(puzzleList.random())
     }
 
-    // Appends a tapped letter to the current guess
-    fun onLetterClick(letter: Char) {
-        _state.value = _state.value.copy(
-            currentGuess = _state.value.currentGuess + letter,
+    // Appends a tapped letter to the current guess and marks the tile as selected
+    fun onLetterClick(tileIndex: Int, letter: Char) {
+        val s = _state.value
+        if (tileIndex in s.selectedTileIndices) return  // tile already used in this guess
+        _state.value = s.copy(
+            currentGuess = s.currentGuess + letter,
+            selectedTileIndices = s.selectedTileIndices + tileIndex,
             guessResult = GuessResult.NONE
         )
     }
 
-    // Checks the current guess against remaining answers and updates state accordingly
+    // Checks the current guess against remaining answers and resets tile selection
     fun onGuess() {
         val s = _state.value
         val guess = s.currentGuess.lowercase()
@@ -123,16 +129,25 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
                 remainingAnswers = s.remainingAnswers - guess,
                 guessedWords = (s.guessedWords + guess).sorted(),
                 currentGuess = "",
+                selectedTileIndices = emptyList(),
                 guessResult = GuessResult.CORRECT
             )
         } else {
-            _state.value = s.copy(currentGuess = "", guessResult = GuessResult.WRONG)
+            _state.value = s.copy(
+                currentGuess = "",
+                selectedTileIndices = emptyList(),
+                guessResult = GuessResult.WRONG
+            )
         }
     }
 
-    // Clears the current guess without scoring it
+    // Clears the current guess and deselects all tiles
     fun onClear() {
-        _state.value = _state.value.copy(currentGuess = "", guessResult = GuessResult.NONE)
+        _state.value = _state.value.copy(
+            currentGuess = "",
+            selectedTileIndices = emptyList(),
+            guessResult = GuessResult.NONE
+        )
     }
 
     // Reveals all remaining unfound answers in the word list
