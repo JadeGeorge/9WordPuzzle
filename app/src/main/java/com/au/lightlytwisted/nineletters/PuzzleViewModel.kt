@@ -1,14 +1,13 @@
 /*
  * File:     PuzzleViewModel.kt
  * Created:  2026-04-13
- * Modified: 2026-04-13
+ * Modified: 2026-04-14
  * Author:   Jade
  * Purpose:  Holds all game state and logic for the Nine Letters puzzle.
  *           The UI observes PuzzleState via a StateFlow and calls the event
  *           functions (onLetterClick, onGuess, etc.) in response to user input.
- * Notes:    Dictionary loading runs on a background thread so the UI stays
- *           responsive on startup. The puzzle word and centre letter are
- *           hardcoded for now — multiple puzzles to be added later.
+ * Notes:    Dictionary loading runs once on startup; switching puzzles only
+ *           reruns the answer-finding step, not the full dictionary load.
  */
 
 package com.au.lightlytwisted.nineletters
@@ -29,6 +28,7 @@ enum class GuessResult { NONE, CORRECT, WRONG }
 // Immutable snapshot of everything the UI needs to render the current game state
 data class PuzzleState(
     val isLoading: Boolean = true,
+    val puzzleName: String = "",
     val gridLetters: List<Char> = emptyList(),  // 9 letters; index 4 is always the centre
     val centreLetter: Char = ' ',
     val currentGuess: String = "",
@@ -51,11 +51,11 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
 
     private val dictionary = Dictionary()
 
-    // Kick off dictionary loading and puzzle setup as soon as the ViewModel is created
+    // Load the dictionary then start with the first puzzle in the list
     init {
         viewModelScope.launch(Dispatchers.IO) {
             loadDictionary()
-            setupPuzzle(nineLetterWord = "scrambler", centreLetter = 's')
+            setupPuzzle(puzzleList.first())
         }
     }
 
@@ -69,27 +69,41 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
             }
     }
 
-    // Finds all valid answers, builds the shuffled letter grid, and publishes the initial state
-    private suspend fun setupPuzzle(nineLetterWord: String, centreLetter: Char) {
-        val answers = dictionary.findMatches(nineLetterWord)
-            .filter { it.contains(centreLetter) }
+    // Finds all valid answers, builds the shuffled letter grid, and publishes the new state
+    private suspend fun setupPuzzle(puzzle: Puzzle) {
+        val answers = dictionary.findMatches(puzzle.word)
+            .filter { it.contains(puzzle.centreLetter) }
             .toSet()
 
-        val outer = nineLetterWord.toMutableList()
-            .also { it.remove(centreLetter) }
+        val outer = puzzle.word.toMutableList()
+            .also { it.remove(puzzle.centreLetter) }
             .shuffled()
 
         // Grid: outer[0..3] | centre | outer[4..7]
-        val grid = outer.subList(0, 4) + listOf(centreLetter) + outer.subList(4, 8)
+        val grid = outer.subList(0, 4) + listOf(puzzle.centreLetter) + outer.subList(4, 8)
 
         withContext(Dispatchers.Main) {
             _state.value = PuzzleState(
                 isLoading = false,
+                puzzleName = puzzle.displayName,
                 gridLetters = grid,
-                centreLetter = centreLetter,
+                centreLetter = puzzle.centreLetter,
                 remainingAnswers = answers
             )
         }
+    }
+
+    // Loads a specific puzzle chosen by the player, resetting all game state
+    fun loadPuzzle(puzzle: Puzzle) {
+        _state.value = _state.value.copy(isLoading = true)
+        viewModelScope.launch(Dispatchers.IO) {
+            setupPuzzle(puzzle)
+        }
+    }
+
+    // Picks a random puzzle from the list and loads it
+    fun loadRandomPuzzle() {
+        loadPuzzle(puzzleList.random())
     }
 
     // Appends a tapped letter to the current guess
