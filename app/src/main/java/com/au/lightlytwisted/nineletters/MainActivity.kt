@@ -222,6 +222,17 @@ fun PuzzleScreen(vm: PuzzleViewModel = viewModel()) {
                 letterSpacing = 4.sp
             )
 
+            // Error message shown below the guess — explains why the word was rejected
+            if (state.guessMessage.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = state.guessMessage,
+                    fontSize = 13.sp,
+                    color = Color(0xFFC62828),
+                    textAlign = TextAlign.Center
+                )
+            }
+
             Spacer(Modifier.height(16.dp))
 
             // CHECK submits the guess; CLEAR wipes it without scoring

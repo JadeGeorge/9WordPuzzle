@@ -1,7 +1,7 @@
 /*
  * File:     PuzzleViewModel.kt
  * Created:  2026-04-13
- * Modified: 2026-04-14
+ * Modified: 2026-04-15
  * Author:   Jade
  * Purpose:  Holds all game state and logic for the Nine Letters puzzle.
  *           The UI observes PuzzleState via a StateFlow and calls the event
@@ -38,6 +38,7 @@ data class PuzzleState(
     val remainingAnswers: Set<String> = emptySet(),
     val guessedWords: List<String> = emptyList(),
     val guessResult: GuessResult = GuessResult.NONE,
+    val guessMessage: String = "",
     val answersRevealed: Boolean = false
 ) {
     // Total number of valid answers for the current puzzle
@@ -62,13 +63,13 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // Reads words.txt from assets, keeps words of 4+ letters, and adds them to the trie
+    // Reads dictionary.txt from assets (one word per line), keeps words of 4+ letters
     private fun loadDictionary() {
-        getApplication<Application>().assets.open("words.txt")
+        getApplication<Application>().assets.open("dictionary.txt")
             .bufferedReader()
             .forEachLine { line ->
-                val word = line.trim().takeWhile { it.isLetter() }.lowercase()
-                if (word.length >= 4) dictionary.addWord(word)
+                val word = line.trim().lowercase()
+                if (word.length >= 4 && word.all { it.isLetter() }) dictionary.addWord(word)
             }
     }
 
@@ -118,45 +119,75 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
             _state.value = s.copy(
                 currentGuess = s.currentGuess.removeRange(existingPosition, existingPosition + 1),
                 selectedTileIndices = s.selectedTileIndices.toMutableList().also { it.removeAt(existingPosition) },
-                guessResult = GuessResult.NONE
+                guessResult = GuessResult.NONE,
+                guessMessage = ""
             )
         } else {
             // Not yet selected — append to guess and mark tile
             _state.value = s.copy(
                 currentGuess = s.currentGuess + letter,
                 selectedTileIndices = s.selectedTileIndices + tileIndex,
-                guessResult = GuessResult.NONE
+                guessResult = GuessResult.NONE,
+                guessMessage = ""
             )
         }
     }
 
-    // Checks the current guess against remaining answers and resets tile selection
+    // Checks the current guess and returns a specific message explaining any failure
     fun onGuess() {
         val s = _state.value
         val guess = s.currentGuess.lowercase()
-        if (guess in s.remainingAnswers) {
+        val display = guess.uppercase()
+
+        val (result, message) = when {
+            guess.length < 4 ->
+                GuessResult.WRONG to "$display: words must be at least 4 letters"
+
+            !guess.contains(s.centreLetter) ->
+                GuessResult.WRONG to "$display: must include the letter '${s.centreLetter.uppercaseChar()}'"
+
+            guess in s.guessedWords ->
+                GuessResult.WRONG to "$display: already found"
+
+            guess in s.remainingAnswers ->
+                GuessResult.CORRECT to ""
+
+            guess.endsWith('s') && dictionary.contains(guess.dropLast(1)) ->
+                GuessResult.WRONG to "$display: plurals not allowed"
+
+            dictionary.contains(guess) ->
+                GuessResult.WRONG to "$display: not a puzzle word"
+
+            else ->
+                GuessResult.WRONG to "$display: not a valid word"
+        }
+
+        if (result == GuessResult.CORRECT) {
             _state.value = s.copy(
                 remainingAnswers = s.remainingAnswers - guess,
                 guessedWords = (s.guessedWords + guess).sorted(),
                 currentGuess = "",
                 selectedTileIndices = emptyList(),
-                guessResult = GuessResult.CORRECT
+                guessResult = GuessResult.CORRECT,
+                guessMessage = ""
             )
         } else {
             _state.value = s.copy(
                 currentGuess = "",
                 selectedTileIndices = emptyList(),
-                guessResult = GuessResult.WRONG
+                guessResult = GuessResult.WRONG,
+                guessMessage = message
             )
         }
     }
 
-    // Clears the current guess and deselects all tiles
+    // Clears the current guess, deselects all tiles, and dismisses any error message
     fun onClear() {
         _state.value = _state.value.copy(
             currentGuess = "",
             selectedTileIndices = emptyList(),
-            guessResult = GuessResult.NONE
+            guessResult = GuessResult.NONE,
+            guessMessage = ""
         )
     }
 

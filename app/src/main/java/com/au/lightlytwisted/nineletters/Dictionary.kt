@@ -1,7 +1,7 @@
 /*
  * File:     Dictionary.kt
  * Created:  2026-04-13
- * Modified: 2026-04-13
+ * Modified: 2026-04-15
  * Author:   Jade
  * Purpose:  Trie-based dictionary for fast anagram lookups. Stores all valid words
  *           and finds every word that can be formed from a given set of letters.
@@ -30,6 +30,15 @@ class Dictionary {
         }
         node.isWord = true
         wordCount++
+    }
+
+    // Returns true if the exact word exists in the dictionary
+    fun contains(word: String): Boolean {
+        var node = root
+        for (c in word) {
+            node = node.children[c] ?: return false
+        }
+        return node.isWord
     }
 
     // Returns all words that can be formed using some or all of the given letters, longest first
