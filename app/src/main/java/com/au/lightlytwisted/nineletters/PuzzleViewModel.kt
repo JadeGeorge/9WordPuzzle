@@ -109,15 +109,25 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
         loadPuzzle(puzzleList.random())
     }
 
-    // Appends a tapped letter to the current guess and marks the tile as selected
+    // Tapping a tile selects it and adds the letter; tapping it again deselects and removes the letter
     fun onLetterClick(tileIndex: Int, letter: Char) {
         val s = _state.value
-        if (tileIndex in s.selectedTileIndices) return  // tile already used in this guess
-        _state.value = s.copy(
-            currentGuess = s.currentGuess + letter,
-            selectedTileIndices = s.selectedTileIndices + tileIndex,
-            guessResult = GuessResult.NONE
-        )
+        val existingPosition = s.selectedTileIndices.indexOf(tileIndex)
+        if (existingPosition >= 0) {
+            // Already selected — remove this letter from the guess at its exact position
+            _state.value = s.copy(
+                currentGuess = s.currentGuess.removeRange(existingPosition, existingPosition + 1),
+                selectedTileIndices = s.selectedTileIndices.toMutableList().also { it.removeAt(existingPosition) },
+                guessResult = GuessResult.NONE
+            )
+        } else {
+            // Not yet selected — append to guess and mark tile
+            _state.value = s.copy(
+                currentGuess = s.currentGuess + letter,
+                selectedTileIndices = s.selectedTileIndices + tileIndex,
+                guessResult = GuessResult.NONE
+            )
+        }
     }
 
     // Checks the current guess against remaining answers and resets tile selection

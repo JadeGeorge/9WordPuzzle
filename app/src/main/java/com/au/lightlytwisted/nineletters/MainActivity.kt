@@ -354,13 +354,10 @@ fun LetterTile(letter: Char, isCentre: Boolean, isSelected: Boolean, onClick: ()
     }
     Button(
         onClick = onClick,
-        enabled = !isSelected,
         modifier = Modifier.size(80.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
-            contentColor = contentColor,
-            disabledContainerColor = containerColor,
-            disabledContentColor = contentColor
+            contentColor = contentColor
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {
