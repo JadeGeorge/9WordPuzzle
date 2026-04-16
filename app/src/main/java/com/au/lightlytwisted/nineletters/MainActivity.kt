@@ -1,16 +1,20 @@
 /*
  * File:     MainActivity.kt
  * Created:  2026-04-13
- * Modified: 2026-04-14
+ * Modified: 2026-04-16
  * Author:   Jade
  * Purpose:  Entry point for the app. Sets up the NavHost that routes between
  *           the Home, Puzzle, and Help screens.
  * Notes:    All game logic lives in PuzzleViewModel; all UI is in the
  *           screen composables. This file only handles app setup and navigation.
+ *           Sound is played here via ToneGenerator so the ViewModel stays
+ *           free of Android audio dependencies.
  */
 
 package com.au.lightlytwisted.nineletters
 
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -28,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -47,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,12 +60,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -83,21 +91,36 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation() {
     val navController = rememberNavController()
 
+    // ViewModel scoped to the activity so Home and Help can both trigger puzzle loads
+    val puzzleVm: PuzzleViewModel = viewModel()
+
     NavHost(navController = navController, startDestination = "home") {
         composable("home") {
             Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                 HomeScreen(
-                    onNewPuzzle = { navController.navigate("puzzle") },
+                    onNewPuzzle = {
+                        puzzleVm.loadRandomPuzzle()
+                        navController.navigate("puzzle")
+                    },
                     onHelp = { navController.navigate("help") },
                     modifier = Modifier.padding(innerPadding)
                 )
             }
         }
         composable("puzzle") {
-            PuzzleScreen()
+            // Receives the shared ViewModel rather than creating its own
+            PuzzleScreen(vm = puzzleVm)
         }
         composable("help") {
-            HelpScreen(onBack = { navController.popBackStack() })
+            HelpScreen(
+                onBack = { navController.popBackStack() },
+                onStartNewPuzzle = {
+                    puzzleVm.loadRandomPuzzle()
+                    navController.navigate("puzzle") {
+                        popUpTo("home")
+                    }
+                }
+            )
         }
     }
 }
@@ -105,8 +128,18 @@ fun AppNavigation() {
 // Puzzle screen — manages its own Scaffold so the TopAppBar and hamburger menu are self-contained
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PuzzleScreen(vm: PuzzleViewModel = viewModel()) {
+fun PuzzleScreen(vm: PuzzleViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
+
+    // Play a short tone each time the ViewModel signals a correct word
+    LaunchedEffect(Unit) {
+        vm.solveSound.collect {
+            val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 80)
+            toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
+            delay(250)
+            toneGen.release()
+        }
+    }
 
     // Local UI state for the hamburger menu, puzzle chooser dialog, and results popup
     var menuExpanded by remember { mutableStateOf(false) }
@@ -150,6 +183,13 @@ fun PuzzleScreen(vm: PuzzleViewModel = viewModel()) {
                                 showChooser = true
                             }
                         )
+                        HorizontalDivider()
+                        // Settings toggles — checkmark appears when option is on
+                        SettingsMenuItem("Clue",             state.settings.showClue)        { vm.toggleClue() }
+                        SettingsMenuItem("Show Blanks",      state.settings.showBlanks)      { vm.toggleBlanks() }
+                        SettingsMenuItem("Show First Letter",state.settings.showFirstLetter) { vm.toggleFirstLetter() }
+                        SettingsMenuItem("Timer",            state.settings.showTimer)       { vm.toggleTimer() }
+                        SettingsMenuItem("Sound on Solve",   state.settings.playSoundOnSolve){ vm.toggleSound() }
                     }
                 }
             )
@@ -206,7 +246,21 @@ fun PuzzleScreen(vm: PuzzleViewModel = viewModel()) {
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            // Clue for the 9-letter word — shown only when the Clue setting is on
+            if (state.settings.showClue && state.puzzleClue.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = state.puzzleClue,
+                    fontSize = 14.sp,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(10.dp))
+            } else {
+                Spacer(Modifier.height(24.dp))
+            }
 
             // Current guess display — turns green on correct, red on wrong
             val guessColor = when (state.guessResult) {
