@@ -73,6 +73,10 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
     private val _state = MutableStateFlow(PuzzleState())
     val state: StateFlow<PuzzleState> = _state.asStateFlow()
 
+    // The full list of puzzles loaded from assets/puzzles.txt
+    private val _puzzles = MutableStateFlow<List<Puzzle>>(emptyList())
+    val puzzles: StateFlow<List<Puzzle>> = _puzzles.asStateFlow()
+
     // Fires once per correct guess so the UI can play a sound without coupling audio to the ViewModel
     private val _solveSound = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val solveSound: SharedFlow<Unit> = _solveSound.asSharedFlow()
@@ -80,12 +84,23 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
     private val dictionary = Dictionary()
     private var timerJob: Job? = null
 
-    // Load the dictionary then start with a random puzzle
+    // Load the dictionary and puzzle list, then start with a random puzzle
     init {
         viewModelScope.launch(Dispatchers.IO) {
             loadDictionary()
-            setupPuzzle(puzzleList.random())
+            loadPuzzles()
+            val p = _puzzles.value
+            if (p.isNotEmpty()) setupPuzzle(p.random())
         }
+    }
+
+    // Reads puzzles.txt from assets and populates the puzzle list
+    private fun loadPuzzles() {
+        val loaded = mutableListOf<Puzzle>()
+        getApplication<Application>().assets.open("puzzles.txt")
+            .bufferedReader()
+            .forEachLine { line -> parsePuzzleLine(line)?.let { loaded.add(it) } }
+        _puzzles.value = loaded
     }
 
     // Reads dictionary.txt from assets (one word per line), keeps words of 4+ letters
@@ -100,16 +115,19 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
 
     // Finds all valid answers, builds the shuffled letter grid, and publishes the new state
     private suspend fun setupPuzzle(puzzle: Puzzle) {
+        // Pick a random centre letter from the word each time the puzzle is played
+        val centreLetter = puzzle.word.random()
+
         val answers = dictionary.findMatches(puzzle.word)
-            .filter { it.contains(puzzle.centreLetter) }
+            .filter { it.contains(centreLetter) }
             .toSet()
 
         val outer = puzzle.word.toMutableList()
-            .also { it.remove(puzzle.centreLetter) }
+            .also { it.remove(centreLetter) }
             .shuffled()
 
         // Grid: outer[0..3] | centre | outer[4..7]
-        val grid = outer.subList(0, 4) + listOf(puzzle.centreLetter) + outer.subList(4, 8)
+        val grid = outer.subList(0, 4) + listOf(centreLetter) + outer.subList(4, 8)
 
         // Preserve settings across puzzle loads; reset everything else including the timer
         val preserved = _state.value.settings
@@ -120,7 +138,7 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
                 puzzleName = puzzle.displayName,
                 puzzleClue = puzzle.clue,
                 gridLetters = grid,
-                centreLetter = puzzle.centreLetter,
+                centreLetter = centreLetter,
                 remainingAnswers = answers,
                 settings = preserved
             )
@@ -153,9 +171,10 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // Picks a random puzzle from the list and loads it
+    // Picks a random puzzle from the loaded list
     fun loadRandomPuzzle() {
-        loadPuzzle(puzzleList.random())
+        val p = _puzzles.value
+        if (p.isNotEmpty()) loadPuzzle(p.random())
     }
 
     // Tapping a tile selects it and adds the letter; tapping it again deselects and removes the letter

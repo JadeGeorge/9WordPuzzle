@@ -34,7 +34,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,7 +48,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -109,7 +107,7 @@ fun AppNavigation() {
         }
         composable("puzzle") {
             // Receives the shared ViewModel rather than creating its own
-            PuzzleScreen(vm = puzzleVm)
+            PuzzleScreen(vm = puzzleVm, onMainMenu = { navController.popBackStack() })
         }
         composable("help") {
             HelpScreen(
@@ -128,7 +126,7 @@ fun AppNavigation() {
 // Puzzle screen — manages its own Scaffold so the TopAppBar and hamburger menu are self-contained
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PuzzleScreen(vm: PuzzleViewModel) {
+fun PuzzleScreen(vm: PuzzleViewModel, onMainMenu: () -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
 
     // Play a short tone each time the ViewModel signals a correct word
@@ -141,10 +139,9 @@ fun PuzzleScreen(vm: PuzzleViewModel) {
         }
     }
 
-    // Local UI state for the hamburger menu, puzzle chooser dialog, and results popup
+    // Local UI state for the hamburger menu and results popup
     var menuExpanded by remember { mutableStateOf(false) }
-    var showChooser by remember { mutableStateOf(false) }
-    var showResults by remember { mutableStateOf(false) }
+    var showResults  by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -175,37 +172,25 @@ fun PuzzleScreen(vm: PuzzleViewModel) {
                                 vm.loadRandomPuzzle()
                             }
                         )
-                        HorizontalDivider()
                         DropdownMenuItem(
-                            text = { Text("Choose Puzzle") },
+                            text = { Text("Main Menu") },
                             onClick = {
                                 menuExpanded = false
-                                showChooser = true
+                                onMainMenu()
                             }
                         )
                         HorizontalDivider()
                         // Settings toggles — checkmark appears when option is on
-                        SettingsMenuItem("Clue",             state.settings.showClue)        { vm.toggleClue() }
-                        SettingsMenuItem("Show Blanks",      state.settings.showBlanks)      { vm.toggleBlanks() }
-                        SettingsMenuItem("Show First Letter",state.settings.showFirstLetter) { vm.toggleFirstLetter() }
-                        SettingsMenuItem("Timer",            state.settings.showTimer)       { vm.toggleTimer() }
-                        SettingsMenuItem("Sound on Solve",   state.settings.playSoundOnSolve){ vm.toggleSound() }
+                        SettingsMenuItem("Clue",             state.settings.showClue)         { vm.toggleClue() }
+                        SettingsMenuItem("Show Blanks",      state.settings.showBlanks)       { vm.toggleBlanks() }
+                        SettingsMenuItem("Show First Letter",state.settings.showFirstLetter)  { vm.toggleFirstLetter() }
+                        SettingsMenuItem("Timer",            state.settings.showTimer)        { vm.toggleTimer() }
+                        SettingsMenuItem("Sound on Solve",   state.settings.playSoundOnSolve) { vm.toggleSound() }
                     }
                 }
             )
         }
     ) { innerPadding ->
-
-        // Puzzle chooser dialog — shown when the player taps Choose Puzzle
-        if (showChooser) {
-            PuzzleChooserDialog(
-                onPuzzleSelected = { puzzle ->
-                    showChooser = false
-                    vm.loadPuzzle(puzzle)
-                },
-                onDismiss = { showChooser = false }
-            )
-        }
 
         if (state.isLoading) {
             Box(
@@ -312,32 +297,78 @@ fun PuzzleScreen(vm: PuzzleViewModel) {
                     .height(8.dp)
             )
 
-            Spacer(Modifier.height(16.dp))
+            // Elapsed-time counter — right-aligned, shown only when Timer setting is on
+            if (state.settings.showTimer) {
+                val minutes = state.elapsedSeconds / 60
+                val seconds = state.elapsedSeconds % 60
+                Text(
+                    text = "%02d:%02d".format(minutes, seconds),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End
+                )
+                Spacer(Modifier.height(8.dp))
+            } else {
+                Spacer(Modifier.height(16.dp))
+            }
 
-            // Scrollable list of found words (primary colour) and revealed answers (grey)
-            val guessedItems = state.guessedWords.map { it to true }
-            val revealedItems = if (state.answersRevealed)
-                state.remainingAnswers.sorted().map { it to false }
-            else
-                emptyList()
-            val allWords = guessedItems + revealedItems
+            // Scrollable list of words — display format and column count depend on active settings
+            val guessedSet = state.guessedWords.toSet()
+            val allAnswers = (state.guessedWords + state.remainingAnswers.toList())
+                .sortedWith(compareByDescending<String> { it.length }.thenBy { it })
 
-            if (allWords.isNotEmpty()) {
+            // Each item: (displayText, isFound, wordLength)
+            val s = state.settings
+            val displayWords: List<Triple<String, Boolean, Int>> = when {
+                state.answersRevealed ->
+                    allAnswers.map { Triple(it.uppercase(), it in guessedSet, it.length) }
+                s.showFirstLetter ->
+                    allAnswers.map { word ->
+                        if (word in guessedSet) Triple(word.uppercase(), true, word.length)
+                        else Triple("${word[0].uppercaseChar()} ${"_ ".repeat(word.length - 1).trim()}", false, word.length)
+                    }
+                s.showBlanks ->
+                    allAnswers.map { word ->
+                        if (word in guessedSet) Triple(word.uppercase(), true, word.length)
+                        else Triple("_ ".repeat(word.length).trim(), false, word.length)
+                    }
+                else ->
+                    allAnswers.filter { it in guessedSet }.map { Triple(it.uppercase(), true, it.length) }
+            }
+
+            if (displayWords.isNotEmpty()) {
+                // Group by length, render each group with the column count specified
+                val byLength = displayWords.groupBy { it.third }
+                val lengths  = byLength.keys.sortedDescending()
+
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    items(allWords) { (word, guessed) ->
-                        Text(
-                            text = word.uppercase(),
-                            color = if (guessed) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outline,
-                            fontSize = 16.sp,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center
-                        )
+                    for (len in lengths) {
+                        val group = byLength[len] ?: continue
+                        val cols  = when (len) { 9 -> 1; 8 -> 2; else -> if (len >= 5) 3 else 4 }
+                        val fSize = when (len) { 9 -> 18.sp; 8 -> 16.sp; 7, 6, 5 -> 14.sp; else -> 12.sp }
+
+                        items(group.chunked(cols)) { row ->
+                            Row(Modifier.fillMaxWidth()) {
+                                row.forEach { (text, found, _) ->
+                                    Text(
+                                        text = text,
+                                        color = if (found) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.outline,
+                                        fontSize = fSize,
+                                        modifier = Modifier.weight(1f),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                // Pad the last row if it isn't full
+                                repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
                     }
                 }
             } else {
@@ -375,31 +406,17 @@ fun PuzzleScreen(vm: PuzzleViewModel) {
     }
 }
 
-// Dialog showing the full list of puzzles for the player to choose from
+// A toggle row in the hamburger menu — checkmark icon when enabled, empty space to preserve alignment when off
 @Composable
-fun PuzzleChooserDialog(onPuzzleSelected: (Puzzle) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Choose a Puzzle") },
-        text = {
-            LazyColumn {
-                items(puzzleList) { puzzle ->
-                    TextButton(
-                        onClick = { onPuzzleSelected(puzzle) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = puzzle.displayName,
-                            fontSize = 16.sp,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+fun SettingsMenuItem(label: String, checked: Boolean, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        onClick = onClick,
+        leadingIcon = {
+            if (checked)
+                Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            else
+                Spacer(Modifier.size(24.dp))
         }
     )
 }

@@ -1,0 +1,267 @@
+# Nine Letters-puzzle list
+# Format: word-clue
+# - word must be exactly 9 letters
+# - the centre letter is chosen randomly each time the puzzle is played
+# - clue is a short hint describing the 9-letter word
+
+scrambler|Mixes letters beyond recognition
+carpenter|A craftsperson who works with wood
+chocolate|A sweet treat made from cacao
+adventure|A novel undertaking
+blackbird|A dark-feathered garden songbird
+generator|A machine that produces electricity
+australia|The land down under
+birthdays|Annual celebrations with cake and candles
+forgotten|Slipped completely from memory
+databases|Organised collections of stored information
+ABANDONED|Left behind
+ACCESSORY|Fashion add‑on
+ACCIDENTS|Unplanned mishaps
+ACCLAIMED|Praised highly
+ACCORDING|As stated by
+ACCOUNTED|Explained or justified
+ACHIEVING|Reaching a goal
+ACTIVATED|Switched on
+ADMISSION|Entry permission
+ADVENTURE|Exciting experience
+AEROPLANE|Aircraft with wings
+AFFECTION|Warm fondness
+AFTERNOON|Midday to evening period
+AGREEMENT|Mutual understanding
+AIRSTRIKE|Attack from the air
+ALUMINIUM|Lightweight metal
+AMBITIOUS|Strongly determined
+AMENDMENT|Formal change
+AMUSEMENT|Entertainment or fun
+ANCHORING|Securing in place
+APARTMENT|Self‑contained flat
+APPEARING|Coming into view
+APPLICANT|Person seeking a position
+APPROVING|Giving consent
+ARCHITECT|Building designer
+ARGUMENTS|Verbal disputes
+ARMCHAIRS|Padded single seats
+ASSISTANT|Helper or aide
+ATTENDING|Being present
+ATTENTION|Focused notice
+ATTRIBUTE|Quality or trait
+AUDIOBOOK|Spoken‑word recording
+AUTHORITY|Power or control
+AVAILABLE|Ready for use
+BACKPACKS|Bags worn on the back
+BACKYARDS|Areas behind houses
+BALLERINA|Female ballet dancer
+BANKNOTES|Paper currency
+BASEBOARD|Floor‑level trim
+BEAUTIFUL|Pleasing to the eye
+BEGINNING|Start or origin
+BEHAVIOUR|Manner of acting
+BELONGING|Feeling of acceptance
+BIRTHDAYS|Annual celebrations
+BLACKENED|Made dark
+BLACKOUTS|Power failures
+BLUEBERRY|Small blue fruit
+BOOKSHOPS|Stores selling books
+BOOKSHELF|Shelf for books
+BRACELETS|Wrist ornaments
+BREAKFAST|Morning meal
+BREATHING|Taking in air
+BRILLIANT|Exceptionally clever
+BROADCAST|Transmit publicly
+BROCHURES|Informational leaflets
+BUSHFIRES|Wildfires in scrubland
+BUTTERFLY|Winged insect
+CAMPFIRES|Outdoor fires
+CANDIDATE|Person running for office
+CAREFULLY|With caution
+CARPENTRY|Woodworking trade
+CELEBRATE|Mark an occasion
+CELLPHONE|Mobile device
+CENTENARY|Hundred‑year anniversary
+CERTAINTY|Absolute confidence
+CHALLENGE|Difficult task
+CHOCOLATE|Sweet cocoa treat
+CLASSROOM|Teaching space
+CLEANINGS|Acts of tidying
+CLEARANCE|Official approval or removal
+CLEVEREST|Most intelligent
+CLIPBOARD|Writing pad with a clip
+COASTLINE|Edge of the land
+COCKATOOS|Crested parrots
+COLLEAGUE|Workmate
+COLLECTED|Gathered together
+COLOURFUL|Full of bright hues
+COLOUREDS|People of mixed heritage (historical term)
+COMBINING|Joining together
+COMMITTEE|Organised group
+COMMUNITY|Local population
+COMPANION|Close friend
+COMPLAINT|Expression of dissatisfaction
+COMPLETED|Finished fully
+COMPUTERS|Electronic devices
+CONCLUDED|Brought to an end
+CONDITION|State of something
+CONFIDENT|Self‑assured
+CONSCIOUS|Aware and alert
+CONTAINER|Storage vessel
+CONTINENT|Large landmass
+CONTINUED|Carried on
+CONVINCED|Persuaded fully
+COPYRIGHT|Legal protection of work
+COUNCILOR|Local government member
+COURTYARD|Open area in a building
+CREATURES|Living beings
+CROSSWALK|Pedestrian crossing
+DANGEROUS|Unsafe or risky
+DAYDREAMS|Pleasant fantasies
+DECISIONS|Choices made
+DECREASED|Made smaller
+DELICIOUS|Tasting very good
+DELIGHTED|Very pleased
+DEMOCRACY|Government by the people
+DEPENDENT|Relying on others
+DEPOSITED|Placed into an account
+DESCRIBED|Explained in words
+DESIGNERS|Creative planners
+DIFFERENT|Not the same
+DIRECTION|Course or path
+DISCOVERY|Finding something new
+DISRUPTED|Interrupted or disturbed
+DIVERSION|Detour or distraction
+EDUCATION|Learning process
+EFFECTIVE|Producing results
+EFFICIENT|Working productively
+ELECTORAL|Relating to voting
+ELEPHANTS|Large grey mammals
+EMERGENCY|Urgent situation
+EMOTIONAL|Full of feeling
+EMPHASISE|Stress or highlight
+ENGINEERS|Technical professionals
+ENJOYABLE|Pleasant or fun
+EQUIPMENT|Necessary tools
+EVERYBODY|All people
+EXCELLENT|Very high quality
+EXPANDING|Growing larger
+EXPENSIVE|Costing a lot
+EXPLORING|Investigating
+FAVOURITE|Preferred choice
+FEDERATED|United in a group
+FIREPLACE|Indoor hearth
+FISHERMAN|Person who catches fish
+FLOODGATE|Water‑control barrier
+FOOTSTEPS|Sounds of walking
+FORGOTTEN|Not remembered
+FRAMEWORK|Structural support
+FRONTLINE|Most exposed position
+FURNITURE|Household furnishings
+GARDENING|Growing plants
+GENTLEMAN|Polite man
+GOVERNORS|State leaders
+GUIDELINE|Recommended rule
+HAMBURGER|Beef sandwich
+HANDSHAKE|Greeting gesture
+HAPPINESS|State of joy
+HEADLIGHT|Front vehicle lamp
+HERITAGES|Cultural backgrounds
+HISTORIAN|Expert on history
+HOMEOWNER|Person who owns a house
+HONEYCOMB|Wax structure of bees
+HOUSEHOLD|People living together
+IMPORTANT|Of great significance
+INCLUDING|Containing as part
+INCREASED|Made larger
+INVISIBLE|Unable to be seen
+JELLYFISH|Stinging sea creature
+KANGAROOS|Australian marsupials
+KNOWLEDGE|Understanding or information
+LANDSCAPE|Outdoor scenery
+LAUGHTER|Sound of amusement
+LAWNMOWER|Grass‑cutting machine
+LITTERING|Dropping rubbish
+MAINFRAME|Large central computer
+MAINTAINS|Keeps in good condition
+MEASURING|Determining size
+MIGRATION|Movement from place to place
+MOONLIGHT|Light from the moon
+MOUNTAINS|High landforms
+MULTITUDE|Large number
+NARRATIVE|Story or account
+NATIONALS|Citizens of a country
+NEWSPAPER|Printed daily news
+NIGHTLIFE|Evening entertainment
+NOTEBOOKS|Writing pads
+NUTRITION|Food nourishment
+OCCUPANTS|People inside a place
+OFFENSIVE|Insulting or attacking
+OPERATING|Functioning or running
+ORGANISED|Arranged neatly
+PACKAGING|Wrapping materials
+PAINTINGS|Artwork on canvas
+PASSENGER|Person being transported
+PINEAPPLE|Tropical fruit
+POLLUTION|Environmental contamination
+POLITICAL|Relating to government
+POSITIONS|Locations or roles
+POSTCARDS|Mailed travel cards
+PRACTICAL|Useful and realistic
+PRECISELY|Exactly
+PREFERRED|Favoured choice
+PRESCHOOL|Early‑learning centre
+PRINTOUTS|Printed pages
+PROBATION|Trial period
+PROCEDURE|Official process
+PROCESSOR|Computing unit
+PROFESSOR|University teacher
+PROJECTOR|Image‑casting device
+PROMOTION|Career advancement
+PROTECTED|Kept safe
+RAINSTORM|Heavy rain
+READINESS|Prepared state
+REASONING|Logical thinking
+RECTANGLE|Four‑sided shape
+RECYCLING|Reusing materials
+REFLECTED|Mirrored back
+REGARDING|Concerning
+REGULATOR|Control device
+RELATIONS|Social connections
+RELIABLES|Dependable people
+REPORTING|Giving information
+RESIDENTS|People who live somewhere
+RESOURCES|Available supplies
+SANDPAPER|Abrasive sheet
+SCARECROW|Field guardian
+SCHEDULED|Planned in advance
+SCIENTIST|Research professional
+SEAPLANES|Aircraft that land on water
+SECRETARY|Administrative assistant
+SIDEWALKS|Footpaths
+SOMETHING|Unspecified thing
+SPACESHIP|Spacecraft
+STARGAZER|Star observer
+STATEMENT|Formal declaration
+STRENGTHS|Strong qualities
+STRUCTURE|Arrangement of parts
+SUBMARINE|Underwater vessel
+SUNFLOWER|Tall yellow plant
+SUPPORTER|Advocate or fan
+SURRENDER|Give up
+TELEPHONE|Voice‑calling device
+TELESCOPE|Distant‑viewing instrument
+TEMPORARY|Not permanent
+TERRORISM|Politically motivated violence
+TEXTBOOKS|School manuals
+THRESHOLD|Entry point
+TOLERANCE|Acceptance of differences
+TOURISTIC|Related to tourism
+TRADITION|Long‑held custom
+TREASURER|Financial officer
+UNIVERSAL|Applying to all
+VACATIONS|Holiday periods
+VEGETABLE|Edible plant
+WAREHOUSE|Storage building
+WATERFALL|Cascading water
+WINDSWEPT|Exposed to strong winds
+WONDERFUL|Extremely good
+WORKPLACE|Job location
+WORKSHOPS|Training sessions
+WRESTLING|Grappling sport
