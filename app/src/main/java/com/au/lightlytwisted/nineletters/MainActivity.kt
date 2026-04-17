@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
@@ -238,8 +239,27 @@ fun PuzzleScreen(vm: PuzzleViewModel, onMainMenu: () -> Unit) {
             else ->
                 allAnswers.filter { it in guessedSet }.map { Triple(it.uppercase(), true, it.length) }
         }
-        val byLength = displayWords.groupBy { it.third }
-        val lengths  = byLength.keys.sortedDescending()
+        val byLength      = displayWords.groupBy { it.third }
+        val lengths       = byLength.keys.sortedDescending()
+        val highlightWord = state.lastFoundWord.uppercase()
+
+        val listState = rememberLazyListState()
+
+        // When a new word is found, scroll the word list so that row is visible
+        LaunchedEffect(state.lastFoundWord) {
+            if (state.lastFoundWord.isEmpty()) return@LaunchedEffect
+            var idx   = 0
+            var found = false
+            outer@ for (len in lengths) {
+                val group = byLength[len] ?: continue
+                val cols  = when (len) { 9 -> 1; 8 -> 2; else -> if (len >= 5) 3 else 4 }
+                for (chunk in group.chunked(cols)) {
+                    if (chunk.any { it.first == highlightWord }) { found = true; break@outer }
+                    idx++
+                }
+            }
+            if (found) listState.animateScrollToItem(idx)
+        }
 
         if (isLandscape) {
             // ── Landscape: controls on the left, word list on the right ──────────────
@@ -339,6 +359,7 @@ fun PuzzleScreen(vm: PuzzleViewModel, onMainMenu: () -> Unit) {
                 ) {
                     if (displayWords.isNotEmpty()) {
                         LazyColumn(
+                            state                = listState,
                             modifier             = Modifier.weight(1f).fillMaxWidth(),
                             verticalArrangement  = Arrangement.spacedBy(2.dp)
                         ) {
@@ -351,7 +372,11 @@ fun PuzzleScreen(vm: PuzzleViewModel, onMainMenu: () -> Unit) {
                                         row.forEach { (text, found, _) ->
                                             Text(
                                                 text      = text,
-                                                color     = if (found) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                                color     = when {
+                                                    found && text == highlightWord -> Color(0xFF4CAF50)
+                                                    found                          -> MaterialTheme.colorScheme.primary
+                                                    else                           -> MaterialTheme.colorScheme.outline
+                                                },
                                                 fontSize  = fSize,
                                                 modifier  = Modifier.weight(1f),
                                                 textAlign = TextAlign.Center
@@ -473,6 +498,7 @@ fun PuzzleScreen(vm: PuzzleViewModel, onMainMenu: () -> Unit) {
                 // Word list
                 if (displayWords.isNotEmpty()) {
                     LazyColumn(
+                        state               = listState,
                         modifier            = Modifier.weight(1f).fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
@@ -485,7 +511,11 @@ fun PuzzleScreen(vm: PuzzleViewModel, onMainMenu: () -> Unit) {
                                     row.forEach { (text, found, _) ->
                                         Text(
                                             text      = text,
-                                            color     = if (found) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                            color     = when {
+                                                found && text == highlightWord -> Color(0xFF4CAF50)
+                                                found                          -> MaterialTheme.colorScheme.primary
+                                                else                           -> MaterialTheme.colorScheme.outline
+                                            },
                                             fontSize  = fSize,
                                             modifier  = Modifier.weight(1f),
                                             textAlign = TextAlign.Center

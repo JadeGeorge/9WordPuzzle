@@ -59,7 +59,8 @@ data class PuzzleState(
     val guessMessage: String = "",
     val answersRevealed: Boolean = false,
     val settings: Settings = Settings(),             // User's current cheat/assist settings
-    val elapsedSeconds: Long = 0L                    // Elapsed time since this puzzle was loaded
+    val elapsedSeconds: Long = 0L,                   // Elapsed time since this puzzle was loaded
+    val lastFoundWord: String = ""                   // Most recently guessed correct word (highlighted in the list)
 ) {
     // Total number of valid answers for the current puzzle
     val totalAnswers: Int get() = remainingAnswers.size + guessedWords.size
@@ -236,7 +237,8 @@ class PuzzleViewModel(application: Application) : AndroidViewModel(application) 
                 currentGuess = "",
                 selectedTileIndices = emptyList(),
                 guessResult = GuessResult.CORRECT,
-                guessMessage = ""
+                guessMessage = "",
+                lastFoundWord = guess
             )
             if (s.settings.playSoundOnSolve) _solveSound.tryEmit(Unit)
         } else {
