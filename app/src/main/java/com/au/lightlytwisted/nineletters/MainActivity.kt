@@ -13,6 +13,7 @@
 
 package com.au.lightlytwisted.nineletters
 
+import android.content.res.Configuration
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Bundle
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,6 +60,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -152,6 +156,7 @@ fun PuzzleScreen(vm: PuzzleViewModel, onMainMenu: () -> Unit) {
                         fontWeight = FontWeight.Bold
                     )
                 },
+                expandedHeight = 48.dp,
                 actions = {
                     // Hamburger menu button in the top right
                     IconButton(onClick = { menuExpanded = true }) {
@@ -204,204 +209,317 @@ fun PuzzleScreen(vm: PuzzleViewModel, onMainMenu: () -> Unit) {
             return@Scaffold
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(Modifier.height(16.dp))
+        // Shared computation used by both portrait and landscape layouts
+        val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val tileSize    = if (isLandscape) 60.dp else 80.dp
+        val grid        = state.gridLetters
+        val guessColor  = when (state.guessResult) {
+            GuessResult.CORRECT -> Color(0xFF2E7D32)
+            GuessResult.WRONG   -> Color(0xFFC62828)
+            GuessResult.NONE    -> MaterialTheme.colorScheme.onSurface
+        }
+        val guessedSet  = state.guessedWords.toSet()
+        val allAnswers  = (state.guessedWords + state.remainingAnswers.toList())
+            .sortedWith(compareByDescending<String> { it.length }.thenBy { it })
+        val s = state.settings
+        val displayWords: List<Triple<String, Boolean, Int>> = when {
+            state.answersRevealed ->
+                allAnswers.map { Triple(it.uppercase(), it in guessedSet, it.length) }
+            s.showFirstLetter ->
+                allAnswers.map { word ->
+                    if (word in guessedSet) Triple(word.uppercase(), true, word.length)
+                    else Triple("${word[0].uppercaseChar()} ${"_ ".repeat(word.length - 1).trim()}", false, word.length)
+                }
+            s.showBlanks ->
+                allAnswers.map { word ->
+                    if (word in guessedSet) Triple(word.uppercase(), true, word.length)
+                    else Triple("_ ".repeat(word.length).trim(), false, word.length)
+                }
+            else ->
+                allAnswers.filter { it in guessedSet }.map { Triple(it.uppercase(), true, it.length) }
+        }
+        val byLength = displayWords.groupBy { it.third }
+        val lengths  = byLength.keys.sortedDescending()
 
-            // 3x3 letter grid — index 4 is the centre tile
-            val grid = state.gridLetters
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (row in 0..2) {
+        if (isLandscape) {
+            // ── Landscape: controls on the left, word list on the right ──────────────
+            Row(Modifier.fillMaxSize().padding(innerPadding)) {
+
+                // Left column — game controls, vertically centred
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(horizontal = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)
+                ) {
+                    // Clue (if enabled)
+                    if (s.showClue && state.puzzleClue.isNotEmpty()) {
+                        Text(
+                            text = state.puzzleClue,
+                            fontSize = 13.sp,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // 3x3 letter grid (smaller tiles in landscape)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (row in 0..2) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                for (col in 0..2) {
+                                    val index = row * 3 + col
+                                    LetterTile(
+                                        letter    = grid[index].uppercaseChar(),
+                                        isCentre  = index == 4,
+                                        isSelected = index in state.selectedTileIndices,
+                                        onClick   = { vm.onLetterClick(index, grid[index]) },
+                                        size      = tileSize
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Guess display or error message — only one shown at a time
+                    if (state.guessMessage.isNotEmpty()) {
+                        Text(
+                            text      = state.guessMessage,
+                            fontSize  = 12.sp,
+                            color     = Color(0xFFC62828),
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        Text(
+                            text          = state.currentGuess.uppercase().ifEmpty { "—" },
+                            fontSize      = 22.sp,
+                            fontWeight    = FontWeight.Bold,
+                            color         = guessColor,
+                            letterSpacing = 4.sp
+                        )
+                    }
+
+                    // CHECK / CLEAR buttons
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        for (col in 0..2) {
-                            val index = row * 3 + col
-                            LetterTile(
-                                letter = grid[index].uppercaseChar(),
-                                isCentre = index == 4,
-                                isSelected = index in state.selectedTileIndices,
-                                onClick = { vm.onLetterClick(index, grid[index]) }
+                        Button(onClick = { vm.onGuess() }, enabled = state.currentGuess.isNotEmpty()) {
+                            Text("CHECK")
+                        }
+                        OutlinedButton(onClick = { vm.onClear() }) { Text("CLEAR") }
+                    }
+
+                    // Progress bar and timer on one row to save vertical space
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { state.progress },
+                            modifier = Modifier.weight(1f).height(6.dp)
+                        )
+                        if (s.showTimer) {
+                            Text(
+                                text     = "%02d:%02d".format(state.elapsedSeconds / 60, state.elapsedSeconds % 60),
+                                fontSize = 12.sp,
+                                color    = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
-            }
 
-            // Clue for the 9-letter word — shown only when the Clue setting is on
-            if (state.settings.showClue && state.puzzleClue.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = state.puzzleClue,
-                    fontSize = 14.sp,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(10.dp))
-            } else {
-                Spacer(Modifier.height(24.dp))
-            }
-
-            // Current guess display — turns green on correct, red on wrong
-            val guessColor = when (state.guessResult) {
-                GuessResult.CORRECT -> Color(0xFF2E7D32)
-                GuessResult.WRONG -> Color(0xFFC62828)
-                GuessResult.NONE -> MaterialTheme.colorScheme.onSurface
-            }
-            Text(
-                text = state.currentGuess.uppercase().ifEmpty { "—" },
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = guessColor,
-                letterSpacing = 4.sp
-            )
-
-            // Error message shown below the guess — explains why the word was rejected
-            if (state.guessMessage.isNotEmpty()) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = state.guessMessage,
-                    fontSize = 13.sp,
-                    color = Color(0xFFC62828),
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // CHECK submits the guess; CLEAR wipes it without scoring
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = { vm.onGuess() },
-                    enabled = state.currentGuess.isNotEmpty()
-                ) {
-                    Text("CHECK")
-                }
-                OutlinedButton(onClick = { vm.onClear() }) {
-                    Text("CLEAR")
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // Progress bar showing how many answers have been found
-            LinearProgressIndicator(
-                progress = { state.progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-            )
-
-            // Elapsed-time counter — right-aligned, shown only when Timer setting is on
-            if (state.settings.showTimer) {
-                val minutes = state.elapsedSeconds / 60
-                val seconds = state.elapsedSeconds % 60
-                Text(
-                    text = "%02d:%02d".format(minutes, seconds),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.End
-                )
-                Spacer(Modifier.height(8.dp))
-            } else {
-                Spacer(Modifier.height(16.dp))
-            }
-
-            // Scrollable list of words — display format and column count depend on active settings
-            val guessedSet = state.guessedWords.toSet()
-            val allAnswers = (state.guessedWords + state.remainingAnswers.toList())
-                .sortedWith(compareByDescending<String> { it.length }.thenBy { it })
-
-            // Each item: (displayText, isFound, wordLength)
-            val s = state.settings
-            val displayWords: List<Triple<String, Boolean, Int>> = when {
-                state.answersRevealed ->
-                    allAnswers.map { Triple(it.uppercase(), it in guessedSet, it.length) }
-                s.showFirstLetter ->
-                    allAnswers.map { word ->
-                        if (word in guessedSet) Triple(word.uppercase(), true, word.length)
-                        else Triple("${word[0].uppercaseChar()} ${"_ ".repeat(word.length - 1).trim()}", false, word.length)
-                    }
-                s.showBlanks ->
-                    allAnswers.map { word ->
-                        if (word in guessedSet) Triple(word.uppercase(), true, word.length)
-                        else Triple("_ ".repeat(word.length).trim(), false, word.length)
-                    }
-                else ->
-                    allAnswers.filter { it in guessedSet }.map { Triple(it.uppercase(), true, it.length) }
-            }
-
-            if (displayWords.isNotEmpty()) {
-                // Group by length, render each group with the column count specified
-                val byLength = displayWords.groupBy { it.third }
-                val lengths  = byLength.keys.sortedDescending()
-
-                LazyColumn(
+                // Right column — scrollable word list with Show Answers pinned below
+                Column(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                        .fillMaxHeight()
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
                 ) {
-                    for (len in lengths) {
-                        val group = byLength[len] ?: continue
-                        val cols  = when (len) { 9 -> 1; 8 -> 2; else -> if (len >= 5) 3 else 4 }
-                        val fSize = when (len) { 9 -> 18.sp; 8 -> 16.sp; 7, 6, 5 -> 14.sp; else -> 12.sp }
-
-                        items(group.chunked(cols)) { row ->
-                            Row(Modifier.fillMaxWidth()) {
-                                row.forEach { (text, found, _) ->
-                                    Text(
-                                        text = text,
-                                        color = if (found) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.outline,
-                                        fontSize = fSize,
-                                        modifier = Modifier.weight(1f),
-                                        textAlign = TextAlign.Center
-                                    )
+                    if (displayWords.isNotEmpty()) {
+                        LazyColumn(
+                            modifier             = Modifier.weight(1f).fillMaxWidth(),
+                            verticalArrangement  = Arrangement.spacedBy(2.dp)
+                        ) {
+                            for (len in lengths) {
+                                val group = byLength[len] ?: continue
+                                val cols  = when (len) { 9 -> 1; 8 -> 2; else -> if (len >= 5) 3 else 4 }
+                                val fSize = when (len) { 9 -> 18.sp; 8 -> 16.sp; 7, 6, 5 -> 14.sp; else -> 12.sp }
+                                items(group.chunked(cols)) { row ->
+                                    Row(Modifier.fillMaxWidth()) {
+                                        row.forEach { (text, found, _) ->
+                                            Text(
+                                                text      = text,
+                                                color     = if (found) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                                fontSize  = fSize,
+                                                modifier  = Modifier.weight(1f),
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                        repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                                    }
                                 }
-                                // Pad the last row if it isn't full
-                                repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+
+                    if (!state.answersRevealed) {
+                        Button(
+                            onClick  = { vm.onShowAnswers(); showResults = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("SHOW ANSWERS") }
+                    }
+                }
+            }
+
+        } else {
+            // ── Portrait: single scrolling column ────────────────────────────────────
+            Column(
+                modifier            = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(Modifier.height(8.dp))
+
+                // 3x3 letter grid
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (row in 0..2) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for (col in 0..2) {
+                                val index = row * 3 + col
+                                LetterTile(
+                                    letter    = grid[index].uppercaseChar(),
+                                    isCentre  = index == 4,
+                                    isSelected = index in state.selectedTileIndices,
+                                    onClick   = { vm.onLetterClick(index, grid[index]) },
+                                    size      = tileSize
+                                )
                             }
                         }
                     }
                 }
-            } else {
-                Spacer(Modifier.weight(1f))
-            }
 
-            // SHOW ANSWERS opens the results popup; afterwards the button is hidden
-            if (!state.answersRevealed) {
-                Button(
-                    onClick = {
-                        vm.onShowAnswers()
-                        showResults = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("SHOW ANSWERS")
+                // Clue (if enabled)
+                if (s.showClue && state.puzzleClue.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text      = state.puzzleClue,
+                        fontSize  = 14.sp,
+                        fontStyle = FontStyle.Italic,
+                        color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier  = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(10.dp))
+                } else {
+                    Spacer(Modifier.height(24.dp))
                 }
-            }
 
-            // Results popup — shown after the player reveals answers
-            if (showResults) {
-                ResultsDialog(
-                    guessedWords = state.guessedWords,
-                    remainingAnswers = state.remainingAnswers,
-                    onNewPuzzle = {
-                        showResults = false
-                        vm.loadRandomPuzzle()
-                    },
-                    onDismiss = { showResults = false }
+                // Guess display or error message — only one shown at a time
+                if (state.guessMessage.isNotEmpty()) {
+                    Text(
+                        text      = state.guessMessage,
+                        fontSize  = 13.sp,
+                        color     = Color(0xFFC62828),
+                        textAlign = TextAlign.Center
+                    )
+                } else {
+                    Text(
+                        text          = state.currentGuess.uppercase().ifEmpty { "—" },
+                        fontSize      = 28.sp,
+                        fontWeight    = FontWeight.Bold,
+                        color         = guessColor,
+                        letterSpacing = 4.sp
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // CHECK / CLEAR buttons
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { vm.onGuess() }, enabled = state.currentGuess.isNotEmpty()) {
+                        Text("CHECK")
+                    }
+                    OutlinedButton(onClick = { vm.onClear() }) { Text("CLEAR") }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Progress bar
+                LinearProgressIndicator(
+                    progress = { state.progress },
+                    modifier = Modifier.fillMaxWidth().height(8.dp)
                 )
-            }
 
-            Spacer(Modifier.height(16.dp))
+                // Timer (right-aligned below progress bar)
+                if (s.showTimer) {
+                    Text(
+                        text      = "%02d:%02d".format(state.elapsedSeconds / 60, state.elapsedSeconds % 60),
+                        fontSize  = 13.sp,
+                        color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier  = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.End
+                    )
+                    Spacer(Modifier.height(8.dp))
+                } else {
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                // Word list
+                if (displayWords.isNotEmpty()) {
+                    LazyColumn(
+                        modifier            = Modifier.weight(1f).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        for (len in lengths) {
+                            val group = byLength[len] ?: continue
+                            val cols  = when (len) { 9 -> 1; 8 -> 2; else -> if (len >= 5) 3 else 4 }
+                            val fSize = when (len) { 9 -> 18.sp; 8 -> 16.sp; 7, 6, 5 -> 14.sp; else -> 12.sp }
+                            items(group.chunked(cols)) { row ->
+                                Row(Modifier.fillMaxWidth()) {
+                                    row.forEach { (text, found, _) ->
+                                        Text(
+                                            text      = text,
+                                            color     = if (found) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                            fontSize  = fSize,
+                                            modifier  = Modifier.weight(1f),
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                    repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+
+                // Show Answers button
+                if (!state.answersRevealed) {
+                    Button(
+                        onClick  = { vm.onShowAnswers(); showResults = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("SHOW ANSWERS") }
+                }
+
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+
+        // Results dialog — overlays the full screen in both orientations
+        if (showResults) {
+            ResultsDialog(
+                guessedWords    = state.guessedWords,
+                remainingAnswers = state.remainingAnswers,
+                onNewPuzzle     = { showResults = false; vm.loadRandomPuzzle() },
+                onDismiss       = { showResults = false }
+            )
         }
     }
 }
@@ -423,7 +541,7 @@ fun SettingsMenuItem(label: String, checked: Boolean, onClick: () -> Unit) {
 
 // A single letter button — black for the centre tile, green when selected, surface colour otherwise
 @Composable
-fun LetterTile(letter: Char, isCentre: Boolean, isSelected: Boolean, onClick: () -> Unit) {
+fun LetterTile(letter: Char, isCentre: Boolean, isSelected: Boolean, onClick: () -> Unit, size: Dp = 80.dp) {
     val containerColor = when {
         isSelected -> Color(0xFF4CAF50)
         isCentre   -> Color.Black
@@ -436,7 +554,7 @@ fun LetterTile(letter: Char, isCentre: Boolean, isSelected: Boolean, onClick: ()
     }
     Button(
         onClick = onClick,
-        modifier = Modifier.size(80.dp),
+        modifier = Modifier.size(size),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = contentColor
