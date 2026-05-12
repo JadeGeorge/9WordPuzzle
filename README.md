@@ -1,6 +1,6 @@
 # Nine Letters
 
-A native Android word puzzle game built with Kotlin and Jetpack Compose.
+The puzzle game was originally written as a simple web game with HTML/JS/CSS . I have recently converted it to a native Android word puzzle game built with Kotlin and Jetpack Compose. The original web app code is also included in the project.
 
 Given nine letters arranged in a 3×3 grid, find as many words as you can — every word must include the centre letter, and be at least four letters long. Try to find the nine-letter word that uses every tile.
 
