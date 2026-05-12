@@ -30,10 +30,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
@@ -286,19 +289,45 @@ fun PuzzleScreen(vm: PuzzleViewModel, onMainMenu: () -> Unit) {
                         )
                     }
 
-                    // 3x3 letter grid (smaller tiles in landscape)
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for (row in 0..2) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                for (col in 0..2) {
-                                    val index = row * 3 + col
-                                    LetterTile(
-                                        letter    = grid[index].uppercaseChar(),
-                                        isCentre  = index == 4,
-                                        isSelected = index in state.selectedTileIndices,
-                                        onClick   = { vm.onLetterClick(index, grid[index]) },
-                                        size      = tileSize
-                                    )
+                    // 3x3 letter grid (smaller tiles in landscape) — all touch handled at Box level
+                    Box(
+                        modifier = Modifier.pointerInput(grid) {
+                            val tilePx = tileSize.toPx()
+                            val gapPx  = 6.dp.toPx()
+                            awaitEachGesture {
+                                // Wait for the initial finger-down event
+                                val downEvent = awaitPointerEvent()
+                                val downChange = downEvent.changes.firstOrNull { it.pressed } ?: return@awaitEachGesture
+                                downChange.consume()
+                                var lastIdx = tileAtOffset(downChange.position, tilePx, gapPx)
+                                if (lastIdx >= 0) vm.onLetterClick(lastIdx, grid[lastIdx])
+                                // Track finger movement and select each new tile entered
+                                do {
+                                    val event = awaitPointerEvent()
+                                    event.changes.forEach { it.consume() }
+                                    val pos    = event.changes.firstOrNull()?.position ?: break
+                                    val newIdx = tileAtOffset(pos, tilePx, gapPx)
+                                    if (newIdx >= 0 && newIdx != lastIdx) {
+                                        vm.onLetterClick(newIdx, grid[newIdx])
+                                        lastIdx = newIdx
+                                    }
+                                } while (event.changes.any { it.pressed })
+                            }
+                        }
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            for (row in 0..2) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    for (col in 0..2) {
+                                        val index = row * 3 + col
+                                        LetterTile(
+                                            letter     = grid[index].uppercaseChar(),
+                                            isCentre   = index == 4,
+                                            isSelected = index in state.selectedTileIndices,
+                                            onClick    = {},  // gesture handled by parent Box
+                                            size       = tileSize
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -411,19 +440,43 @@ fun PuzzleScreen(vm: PuzzleViewModel, onMainMenu: () -> Unit) {
             ) {
                 Spacer(Modifier.height(8.dp))
 
-                // 3x3 letter grid
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (row in 0..2) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for (col in 0..2) {
-                                val index = row * 3 + col
-                                LetterTile(
-                                    letter    = grid[index].uppercaseChar(),
-                                    isCentre  = index == 4,
-                                    isSelected = index in state.selectedTileIndices,
-                                    onClick   = { vm.onLetterClick(index, grid[index]) },
-                                    size      = tileSize
-                                )
+                // 3x3 letter grid — all touch handled at Box level
+                Box(
+                    modifier = Modifier.pointerInput(grid) {
+                        val tilePx = tileSize.toPx()
+                        val gapPx  = 8.dp.toPx()
+                        awaitEachGesture {
+                            val downEvent = awaitPointerEvent()
+                            val downChange = downEvent.changes.firstOrNull { it.pressed } ?: return@awaitEachGesture
+                            downChange.consume()
+                            var lastIdx = tileAtOffset(downChange.position, tilePx, gapPx)
+                            if (lastIdx >= 0) vm.onLetterClick(lastIdx, grid[lastIdx])
+                            do {
+                                val event = awaitPointerEvent()
+                                event.changes.forEach { it.consume() }
+                                val pos    = event.changes.firstOrNull()?.position ?: break
+                                val newIdx = tileAtOffset(pos, tilePx, gapPx)
+                                if (newIdx >= 0 && newIdx != lastIdx) {
+                                    vm.onLetterClick(newIdx, grid[newIdx])
+                                    lastIdx = newIdx
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    }
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (row in 0..2) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                for (col in 0..2) {
+                                    val index = row * 3 + col
+                                    LetterTile(
+                                        letter     = grid[index].uppercaseChar(),
+                                        isCentre   = index == 4,
+                                        isSelected = index in state.selectedTileIndices,
+                                        onClick    = {},  // gesture handled by parent Box
+                                        size       = tileSize
+                                    )
+                                }
                             }
                         }
                     }
@@ -567,6 +620,18 @@ fun SettingsMenuItem(label: String, checked: Boolean, onClick: () -> Unit) {
                 Spacer(Modifier.size(24.dp))
         }
     )
+}
+
+// Returns the grid index (0..8) for a touch offset within the grid container, or -1 if the
+// touch lands outside a tile (i.e. in a gap or beyond the grid boundary).
+private fun tileAtOffset(offset: Offset, tilePx: Float, gapPx: Float): Int {
+    val cell = tilePx + gapPx
+    val col  = (offset.x / cell).toInt()
+    val row  = (offset.y / cell).toInt()
+    if (col !in 0..2 || row !in 0..2) return -1
+    if (offset.x % cell > tilePx)     return -1  // landed in horizontal gap
+    if (offset.y % cell > tilePx)     return -1  // landed in vertical gap
+    return row * 3 + col
 }
 
 // A single letter button — black for the centre tile, green when selected, surface colour otherwise
